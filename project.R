@@ -5,7 +5,7 @@ n.words.list <- 15  #list of words actually related to the
 lure.word <- 16   #the position of the lure word
 sd <- .05     #standard deviation for computing the reverse weight of an edge
 n.trials <- 500    #number of trials
-decay.rate <- .2  # decay rate
+decay.rate <- .8  # decay rate
 activation.threshold <- .8  #threshold above which a node fires
 recalled.threshold <- .8   #threshold above which a word is considered to be recalled
 
@@ -17,31 +17,31 @@ words <- rep(initial.activation, each= n.words) #activation values
 #we initialize a matrix of weight with weights for each pair of words
 weights <- matrix(rep(0, n.words*n.words), nrow = n.words, ncol = n.words)
 
-# we consider that weights between .4 and .7 represent strong association between two words,
-# weights between .2 and .4 represent a mild association between two words, and a weight 
-# under .2 to represent a very low association between two words. A value of 0 means that the
+# we consider that weights between .3 and .5 represent strong association between two words,
+# weights between .1 and .3 represent a mild association between two words, and a weight 
+# under .1 to represent a very low association between two words. A value of 0 means that the
 # words are not related.
 initialize.weights <- function(){
   for (i in 1:n.words.list){
     # weights of words of the list to lure word
-    weights[i,lure.word] <<- runif(1, min= .4, max = .7)
+    weights[i,lure.word] <<- runif(1, min= .03, max = .05)
     # weights of the lure word to the 15 words of the list
     weights[lure.word, i] <<- rnorm(n = 1, mean = weights[i, lure.word], sd = sd)
     for (n in 1:n.words.list) {
       #weights of the 15 words between each other
-      weights[i, n] <<- runif(1, min = .2, max = .4 )
+      weights[i, n] <<- runif(1, min = .01, max = .03 )
       weights[n, i] <<- rnorm(n = 1, mean = weights[i, n], sd = sd)
     }
   }
   for (i in (lure.word+1):n.words) {
     for (n in 1:n.words){
       # weights btween the unrelated words to all the words
-      weights[i, n] <<- runif(1, min=0, max = .7)
+      weights[i, n] <<- runif(1, min=0, max = .05)
       weights[n, i] <<- rnorm(n= 1, mean = weights[i,n], sd= sd)
     }
     for (n in 1:n.words.list) {
       #weights of the unrelated words to the studied words
-      weights[i, n] <<- runif(1, min=0, max = .4)
+      weights[i, n] <<- runif(1, min=0, max = .03)
       weights[n, i] <<- rnorm(n= 1, mean = weights[i,n], sd= sd)
     }
     #weights between unrelated words and lure word
@@ -74,42 +74,48 @@ run.trial <- function(){
     words[n] <<- activation.studied
     for (i in 1:n.words){
       if (i != n){
-        words[i] <<- words[i] + (words[n] * decay.rate * weights[n,i])
+        words[i] <<- words[i] + (words[n] * weights[n,i])
         if(words[i] > 1){
           words[i] <<- 1
         }
         if(words[i] < 0){
           words[i] <<- 0
         }
-        #print(words)
+        print(words)
         firing.node <- which(words[-n] >= activation.threshold)
-        if(is.null(firing.node)){
+        print(firing.node)
+        if(length(firing.node) > 0){
           for (a in 1:length(firing.node)) {
             for(b in 1:n.words){
               if (firing.node[a] != b){
-                words[b] <<- words[b] + (words[firing.node[a]] * decay.rate * weights[firing.node[a],b])
+                words[b] <<- words[b] + (words[firing.node[a]]  * weights[firing.node[a],b])
                 if(words[b] > 1){
                   words[b] <<- 1
                 }
                 if(words[b] < 0){
                   words[b] <<- 0
                 }
-                #print(words)
+                print(words)
               }
             }
           }
         }
       }
     }
-    words[n] <<- words[n] - decay.rate
-    if (words[n] > 1){
-      words[n] <<- 1
-    }
-    if (words[n] < 0){
-      words[n] <<- 0
+    words[-n] <<- words[-n] - decay.rate
+    for (k in 1:n.words) {
+      if (words[k] > 1){
+        words[k] <<- 1
+      }
+      if (words[k] < 0){
+        words[k] <<- 0
+      }
     }
   }
 }
+
+run.trial()
+
 
 run.simulation <- function(trials){
   word.list.counter <- 0
